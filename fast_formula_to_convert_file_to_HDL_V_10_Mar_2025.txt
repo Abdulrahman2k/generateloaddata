@@ -1,0 +1,144 @@
+/*
+MODIFIED FORMULA NAME: ALDAR_PROBATION_CONFIRMATION_AUTOMATION_STEP_1
+FORMULA TYPE: HCM Data Loader
+DESCRIPTION: This formula will create  Worker.dat based on probation confirmation report text
+created by Abdulrahman 10-Mar-2025
+*/
+INPUTS ARE OPERATION (text), LINENO (number), LINEREPEATNO (number),POSITION1 (text), POSITION2 (text), POSITION3 (text), POSITION4 (text), POSITION5 (text), POSITION6 (text),POSITION7 (text), POSITION8 (text), POSITION9 (text), POSITION10 (text), POSITION11 (text), POSITION12 (text),POSITION13 (text)
+
+DEFAULT FOR LINENO IS 1
+DEFAULT FOR LINEREPEATNO IS 1
+
+/* ActionCode|PERSON_NUMBER|PersonId(SOURCE_SYSTEM_ID)|EFFECTIVE_START_DATE|DATE_START|WORKER_TYPE|ACTION_CODE|REASON_CODE|LEGAL_EMPLOYER_NAME|BUSINESS_UNIT|PeriodOfServiceId(SourceSystemId)|WorkTermsAssignmentId(SourceSystemId)|AssignmentId(SourceSystemId) */
+/* END_PROBATION|PERSON_NUMBER|
+DEFAULT FOR POSITION1 IS 'NO DATA'   /* New field with Data Field with Data END_PROBATION */
+DEFAULT FOR POSITION2 IS 'NO DATA'   /* PERSON_NUMBER  */
+DEFAULT FOR POSITION3 IS 'NO DATA'   /* PersonId(SOURCE_SYSTEM_ID) */
+DEFAULT FOR POSITION4 IS 'NO DATA'   /* EFFECTIVE_START_DATE */
+DEFAULT FOR POSITION5 IS 'NO DATA'   /* DATE_START */
+DEFAULT FOR POSITION6 IS 'NO DATA'   /* WORKER_TYPE*/
+DEFAULT FOR POSITION7 IS 'NO DATA'   /* ACTION_CODE */
+DEFAULT FOR POSITION8 IS 'NO DATA'   /* REASON_CODE*/
+DEFAULT FOR POSITION9 IS 'NO DATA'   /* LEGAL_EMPLOYER_NAME */
+DEFAULT FOR POSITION10 IS 'NO DATA'  /* BUSINESS_UNIT */
+DEFAULT FOR POSITION11 IS 'NO DATA'  /* PeriodOfServiceId(SourceSystemId)  */
+DEFAULT FOR POSITION12 IS 'NO DATA'  /* WorkTermsAssignmentId(SourceSystemId) */
+DEFAULT FOR POSITION13 IS 'NO DATA'  /* AssignmentId(SourceSystemId) */
+
+utc_date = GET_SYSDATE()
+cst_date = NEW_TIME(utc_date, 'GMT', 'CST')
+
+IF OPERATION = 'FILETYPE' THEN
+   OUTPUTVALUE = 'DELIMITED'
+ELSE IF OPERATION = 'DELIMITER' THEN 
+   OUTPUTVALUE = '|'
+ELSE IF OPERATION = 'READ' THEN
+   OUTPUTVALUE = 'NONE'
+ELSE IF OPERATION = 'NUMBEROFBUSINESSOBJECTS' THEN
+   OUTPUTVALUE = '2'
+ELSE IF OPERATION = 'METADATALINEINFORMATION' THEN
+   (
+      METADATA1[1] = 'Worker' /*FileName*/ /*Reserved*/
+      METADATA1[2] = 'WorkTerms'
+      METADATA1[3] = 'PersonNumber'
+      METADATA1[4] = 'PersonId(SourceSystemId)'
+      METADATA1[5] = 'PeriodOfServiceId(SourceSystemId)'
+      METADATA1[6] = 'EffectiveLatestChange'
+      METADATA1[7] = 'EffectiveSequence'
+      METADATA1[8] = 'EffectiveStartDate'
+      METADATA1[9] = 'DateStart'
+      METADATA1[10] = 'WorkerType'
+      METADATA1[11] = 'ActionCode'
+      METADATA1[12] = 'ReasonCode'
+      METADATA1[13] = 'SourceSystemOwner'
+      METADATA1[14] = 'SourceSystemId'
+      METADATA1[15] = 'PrimaryWorkTermsFlag'
+      METADATA1[16] = 'LegalEmployerName'
+
+      METADATA2[1] = 'Worker' /*FileName*/ /*Reserved*/  
+      METADATA2[2] = 'Assignment'
+      METADATA2[3] = 'PersonNumber'
+      METADATA2[4] = 'PersonId(SourceSystemId)'
+      METADATA2[5] = 'PeriodOfServiceId(SourceSystemId)'
+      METADATA2[6] = 'EffectiveStartDate'
+      METADATA2[7] = 'EffectiveSequence'
+      METADATA2[8] = 'EffectiveLatestChange'
+      METADATA2[9] = 'DateStart'
+      METADATA2[10] = 'WorkerType'
+      METADATA2[11] = 'ActionCode'
+      METADATA2[12] = 'ReasonCode'
+      METADATA2[13] = 'WorkTermsAssignmentId(SourceSystemId)'
+      METADATA2[14] = 'SourceSystemId'
+      METADATA2[15] = 'SourceSystemOwner'
+      METADATA2[16] = 'PrimaryFlag'
+      METADATA2[17] = 'BusinessUnitShortCode'
+      METADATA2[18] = 'LegalEmployerName'
+      METADATA2[19] = 'FLEX:PER_ASG_DF'
+      METADATA2[20] = 'probationConfirmed(PER_ASG_DF=Global Data Elements)'
+      
+      RETURN METADATA1, METADATA2
+   )
+ELSE IF (OPERATION='MAP' AND POSITION1='END_PROBATION') THEN
+   (
+      FileName = 'Worker'
+      BusinessOperation = 'MERGE'
+      SourceSystemOwner = 'FUSION'
+      ld_EffectiveStartDate = trim(POSITION4)
+      /*DateStart = trim(DATE_START) */
+      ActionCode = 'END_PROBATION'
+      PrimaryWorkTermsFlag = 'Y'
+        IF  LINEREPEATNO=1  THEN
+           (
+        RET = ESS_LOG_WRITE('LINEREPEATNO 1 :' ||TO_CHAR(LINEREPEATNO))  
+        RET = ESS_LOG_WRITE('ORIGINAL LINENO       1 :' ||TO_CHAR(LINENO )) 
+        FileDiscriminator = 'WorkTerms' /*FileDiscriminator*/
+        dummy = ESS_LOG_WRITE('FileDiscriminator after change 10: '||FileDiscriminator)
+        PersonNumber   = TRIM(POSITION2)
+		"PersonId(SourceSystemId)" = TRIM(POSITION3)
+		"PeriodOfServiceId(SourceSystemId)"  = TRIM(POSITION11)
+        EffectiveLatestChange      =  'Y'
+        EffectiveSequence          =  '1'
+		EffectiveStartDate         =  trim(POSITION4)
+		DateStart                  =  trim(POSITION5)
+		WorkerType                 = 'E'
+        ActionCode                 = 'END_PROBATION'
+        SourceSystemOwner          = 'FUSION'
+		SourceSystemId             =  trim(POSITION12)
+		PrimaryWorkTermsFlag       =  'Y'
+		LegalEmployerName          =  trim(POSITION9)  /*Aldar Properties LEGAL EMPLOYER HAS TO BE DERIVED BASED ON BUSINESS UNIT*/
+        SystemPersonType           = 'EMP'
+        LINEREPEATNO=LINEREPEATNO+1
+        LINEREPEAT = 'Y'
+        RETURN BusinessOperation,FileName,FileDiscriminator,PersonNumber,"PersonId(SourceSystemId)","PeriodOfServiceId(SourceSystemId)",EffectiveLatestChange,EffectiveSequence,EffectiveStartDate,DateStart, WorkerType, ActionCode, SourceSystemOwner, SourceSystemId, PrimaryWorkTermsFlag, LegalEmployerName, SystemPersonType, LINEREPEATNO, LINEREPEAT
+           )
+        IF  LINEREPEATNO=2  THEN
+           (
+        RET = ESS_LOG_WRITE('LINEREPEATNO 2 :' ||TO_CHAR(LINEREPEATNO))  
+        RET = ESS_LOG_WRITE('ORIGINAL LINENO       2 :' ||TO_CHAR(LINENO )) 
+        FileDiscriminator = 'Assignment' /*FileDiscriminator*/
+        dummy = ESS_LOG_WRITE('FileDiscriminator after change 2: '||FileDiscriminator)
+        PersonNumber                = TRIM(POSITION2)
+		"PersonId(SourceSystemId)"  = TRIM(POSITION3)
+		"PeriodOfServiceId(SourceSystemId)"   = TRIM(POSITION11)
+		EffectiveStartDate                    =  trim(POSITION4)
+		EffectiveSequence                     =  '1'
+		EffectiveLatestChange                 =  'Y'
+		DateStart                             =  trim(POSITION5)
+		WorkerType                            ='E'
+		ActionCode                            = 'END_PROBATION'
+		"WorkTermsAssignmentId(SourceSystemId)" =  trim(POSITION12)
+		SourceSystemId                        =  trim(POSITION13)
+		SourceSystemOwner                     = 'FUSION'
+		PrimaryFlag                           =  'Y'
+		BusinessUnitShortCode                 =  trim(POSITION10)
+		LegalEmployerName                     =  trim(POSITION9)
+		"FLEX:PER_ASG_DF"                     =  'Global Data Elements'
+		"probationConfirmed(PER_ASG_DF=Global Data Elements)" =  'Y'
+        LINEREPEATNO=LINEREPEATNO+1
+        LINEREPEAT = 'Y'
+        RETURN BusinessOperation,FileName,FileDiscriminator,PersonNumber, "PersonId(SourceSystemId)","PeriodOfServiceId(SourceSystemId)", EffectiveStartDate, EffectiveSequence, EffectiveLatestChange, DateStart,WorkerType, ActionCode, "WorkTermsAssignmentId(SourceSystemId)", SourceSystemId, SourceSystemOwner, PrimaryFlag ,BusinessUnitShortCode, LegalEmployerName, "FLEX:PER_ASG_DF","probationConfirmed(PER_ASG_DF=Global Data Elements)", LINEREPEATNO, LINEREPEAT	
+           )
+ )
+ELSE
+   OUTPUTVALUE = 'NONE'
+RETURN OUTPUTVALUE
